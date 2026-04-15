@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jade Salon Pro</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:url("https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9");
+  background-size:cover;
+  background-position:center;
+  color:white;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.78);
+  z-index:-1;
+}
+
+header{
+  display:flex;
+  justify-content:space-between;
+  padding:15px;
+  background:rgba(0,0,0,0.6);
+  color:#ff4dd2;
+}
+
+.menu{ font-size:22px; cursor:pointer; }
+
+.container{ padding:15px; }
+
+input, select{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border:none;
+  border-radius:8px;
+  background:rgba(255,255,255,0.1);
+  color:white;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  background:#ff4dd2;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#adminPanel{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.92);
+  overflow:auto;
+}
+
+.login{
+  max-width:300px;
+  margin:60px auto;
+  background:#111;
+  padding:15px;
+  border-radius:10px;
+}
+
+.card{
+  background:rgba(20,20,20,0.9);
+  margin:10px;
+  padding:10px;
+  border-left:3px solid #ff4dd2;
+  border-radius:10px;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:6px;
+  padding:10px;
+}
+
+.box{
+  background:#1a1a1a;
+  text-align:center;
+  padding:10px;
+  border-radius:8px;
+}
+
+.actions{
+  display:flex;
+  gap:5px;
+}
+
+.actions button{ flex:1; }
+
+.done{ background:#00ff99; }
+.delete{ background:#ff4444; color:white; }
+
+#toast{
+  position:fixed;
+  bottom:30px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#00ff99;
+  color:black;
+  padding:12px 18px;
+  border-radius:20px;
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<div>💇‍♀️ Jade Salon</div>
+<div class="menu" onclick="openAdmin()">⋮</div>
+</header>
+
+<!-- CLIENT -->
+<div class="container">
+<h3>Book Appointment</h3>
+
+<input id="name" placeholder="Name">
+<input id="phone" placeholder="Phone">
+
+<select id="service">
+<option value="Install - 300">Install - R300</option>
+<option value="Wig - 500">Wig - R500</option>
+<option value="Style - 150">Style - R150</option>
+</select>
+
+<input id="date" type="date">
+<input id="time" type="time">
+
+<button onclick="book()">Book Now</button>
+</div>
+
+<!-- ADMIN -->
+<div id="adminPanel">
+
+<button onclick="closeAdmin()" style="background:red;margin:10px;">Close</button>
+
+<div id="loginBox" class="login">
+<h3>Admin Login</h3>
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<div id="dashboard" style="display:none">
+
+<div class="stats">
+<div class="box">Total<br><b id="total">0</b></div>
+<div class="box">Pending<br><b id="pending">0</b></div>
+<div class="box">Done<br><b id="done">0</b></div>
+<div class="box">Today<br><b id="today">0</b></div>
+</div>
+
+<div id="list"></div>
+
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } 
+from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyB1Is91x-PnXK9hard_hMvUF90GPFliqNI",
+authDomain: "jade-salon.firebaseapp.com",
+projectId: "jade-salon",
+storageBucket: "jade-salon.firebasestorage.app",
+messagingSenderId: "719343246036",
+appId: "1:719343246036:web:47461d68691d70a4f0b941"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const col = collection(db,"bookings");
+
+let all=[];
+
+/* ADMIN */
+window.openAdmin = ()=>adminPanel.style.display="block";
+window.closeAdmin = ()=>adminPanel.style.display="none";
+
+/* BOOKING */
+window.book = async function(){
+
+const n = name.value.trim();
+const p = phone.value.trim();
+const s = service.value;
+const d = date.value;
+const t = time.value;
+
+if(!n || !p || !d || !t){
+show("❌ Fill all fields");
+return;
+}
+
+/* prevent double booking */
+if(all.find(b=>b.date===d && b.time===t)){
+show("⛔ Slot already booked");
+return;
+}
+
+await addDoc(col,{
+name:n,
+phone:p,
+service:s,
+date:d,
+time:t,
+status:"pending",
+created:Date.now()
+});
+
+show("✔ Booked Successfully 💇‍♀️");
+
+name.value="";
+phone.value="";
+date.value="";
+time.value="";
+}
+
+/* LOGIN */
+window.login = function(){
+if(user.value==="jade" && pass.value==="1234"){
+loginBox.style.display="none";
+dashboard.style.display="block";
+load();
+}else{
+alert("Wrong login");
+}
+}
+
+/* LOAD */
+function load(){
+onSnapshot(col,snap=>{
+all=[];
+snap.forEach(d=>all.push({id:d.id,...d.data()}));
+render();
+});
+}
+
+/* RENDER */
+function render(){
+
+let total=0,pending=0,done=0;
+const today = new Date().toISOString().split("T")[0];
+
+list.innerHTML="";
+
+all.forEach(b=>{
+total++;
+if(b.status==="done") done++; else pending++;
+
+list.innerHTML += `
+<div class="card">
+<b>${b.name}</b><br>
+📞 ${b.phone}<br>
+💇 ${b.service}<br>
+📅 ${b.date} ⏰ ${b.time}<br>
+Status: ${b.status}
+
+<div class="actions">
+<button class="done" onclick="mark('${b.id}')">Done</button>
+<button class="delete" onclick="del('${b.id}')">Delete</button>
+</div>
+</div>
+`;
+});
+
+totalEl.innerText=total;
+pendingEl.innerText=pending;
+doneEl.innerText=done;
+todayEl.innerText=all.filter(b=>b.date===today).length;
+}
+
+/* ACTIONS */
+window.mark = id=>updateDoc(doc(db,"bookings",id),{status:"done"});
+window.del = id=>deleteDoc(doc(db,"bookings",id));
+
+const totalEl=document.getElementById("total");
+const pendingEl=document.getElementById("pending");
+const doneEl=document.getElementById("done");
+const todayEl=document.getElementById("today");
+
+/* TOAST */
+window.show=function(msg){
+const t=document.getElementById("toast");
+t.innerText=msg;
+t.style.display="block";
+setTimeout(()=>t.style.display="none",2000);
+}
+</script>
+
+</body>
+  </html>
