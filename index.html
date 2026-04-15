@@ -22,6 +22,7 @@ body::before{
   height:100%;
   background:rgba(0,0,0,0.78);
   z-index:-1;
+  pointer-events:none; /* ✅ FIXED CLICK ISSUE */
 }
 
 header{
@@ -193,11 +194,32 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const col = collection(db,"bookings");
 
+/* ELEMENTS */
+const name = document.getElementById("name");
+const phone = document.getElementById("phone");
+const service = document.getElementById("service");
+const date = document.getElementById("date");
+const time = document.getElementById("time");
+
+const user = document.getElementById("user");     /* ✅ FIX */
+const pass = document.getElementById("pass");     /* ✅ FIX */
+
+const loginBox = document.getElementById("loginBox");
+const dashboard = document.getElementById("dashboard");
+const adminPanel = document.getElementById("adminPanel");
+
+const list = document.getElementById("list");
+
+const totalEl = document.getElementById("total");
+const pendingEl = document.getElementById("pending");
+const doneEl = document.getElementById("done");
+const todayEl = document.getElementById("today");
+
 let all=[];
 
 /* ADMIN */
-window.openAdmin = ()=>adminPanel.style.display="block";
-window.closeAdmin = ()=>adminPanel.style.display="none";
+window.openAdmin = ()=> adminPanel.style.display="block";
+window.closeAdmin = ()=> adminPanel.style.display="none";
 
 /* BOOKING */
 window.book = async function(){
@@ -213,7 +235,6 @@ show("❌ Fill all fields");
 return;
 }
 
-/* prevent double booking */
 if(all.find(b=>b.date===d && b.time===t)){
 show("⛔ Slot already booked");
 return;
@@ -242,7 +263,6 @@ window.login = function(){
 if(user.value==="jade" && pass.value==="1234"){
 loginBox.style.display="none";
 dashboard.style.display="block";
-load();
 }else{
 alert("Wrong login");
 }
@@ -295,11 +315,6 @@ todayEl.innerText=all.filter(b=>b.date===today).length;
 window.mark = id=>updateDoc(doc(db,"bookings",id),{status:"done"});
 window.del = id=>deleteDoc(doc(db,"bookings",id));
 
-const totalEl=document.getElementById("total");
-const pendingEl=document.getElementById("pending");
-const doneEl=document.getElementById("done");
-const todayEl=document.getElementById("today");
-
 /* TOAST */
 window.show=function(msg){
 const t=document.getElementById("toast");
@@ -307,7 +322,11 @@ t.innerText=msg;
 t.style.display="block";
 setTimeout(()=>t.style.display="none",2000);
 }
+
+/* ✅ LOAD DATA IMMEDIATELY */
+load();
+
 </script>
 
 </body>
-  </html>
+</html>
